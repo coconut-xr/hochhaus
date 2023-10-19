@@ -8,7 +8,7 @@ Try it out [here](coconut-xr.github.io/hochhaus/) using a Quest 3 or similar.
 
 **Requires windows and walls to be setup**
 
-Check out our [release video](https://x.com/coconut_xr/status/1712504946883510743)
+Check out our [release video](https://x.com/coconut_xr/status/1715045684083085677?s=20)
 ---
 
 Made with [`@coconut-xr/natuerlich`](https://github.com/coconut-xr/natuerlich), [`react-three-fiber`](https://github.com/pmndrs/react-three-fiber), and [`three.js`](https://github.com/mrdoob/three.js).
