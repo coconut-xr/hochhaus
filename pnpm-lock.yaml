@@ -9,11 +9,11 @@ dependencies:
     specifier: ^0.3.11
     version: 0.3.12(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0)
   '@coconut-xr/natuerlich':
-    specifier: ^0.0.40
-    version: 0.0.40(@coconut-xr/koestlich@0.3.12)(@react-three/fiber@8.14.6)(@types/react@18.2.29)(react@18.2.0)(three@0.155.0)
+    specifier: ^0.0.44
+    version: 0.0.44(@coconut-xr/koestlich@0.3.12)(@react-three/fiber@8.14.6)(@types/react@18.2.29)(react@18.2.0)(three@0.155.0)
   '@coconut-xr/xinteraction':
-    specifier: ^0.1.8
-    version: 0.1.11(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0)
+    specifier: ^0.1.12
+    version: 0.1.12(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0)
   '@react-three/drei':
     specifier: ^9.80.9
     version: 9.88.4(@react-three/fiber@8.14.6)(@types/three@0.155.1)(react-dom@18.2.0)(react@18.2.0)(three@0.155.0)
@@ -341,8 +341,8 @@ packages:
       yoga-wasm-web: 0.3.3
     dev: false
 
-  /@coconut-xr/natuerlich@0.0.40(@coconut-xr/koestlich@0.3.12)(@react-three/fiber@8.14.6)(@types/react@18.2.29)(react@18.2.0)(three@0.155.0):
-    resolution: {integrity: sha512-OjrCpYWx8LolijOBI4dNQqZljkfbTPkfqD5G7J8s4W4Sbc475kKQuE3PnJWWIUaaNSABAmyZwQGXj4JYcMJXsw==}
+  /@coconut-xr/natuerlich@0.0.44(@coconut-xr/koestlich@0.3.12)(@react-three/fiber@8.14.6)(@types/react@18.2.29)(react@18.2.0)(three@0.155.0):
+    resolution: {integrity: sha512-XJ+S35JPliAooieDDw93G2Vg5HvS7wQhCP7Gz7LEY/U171URmmtQ2qT1NLPfZACJqTcwsxKN0kEzNsq2t6ExEg==}
     peerDependencies:
       '@coconut-xr/koestlich': '*'
       '@react-three/fiber': '*'
@@ -353,7 +353,7 @@ packages:
         optional: true
     dependencies:
       '@coconut-xr/koestlich': 0.3.12(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0)
-      '@coconut-xr/xinteraction': 0.1.11(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0)
+      '@coconut-xr/xinteraction': 0.1.12(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0)
       '@coconut-xr/xmaterials': 0.0.3(three@0.155.0)
       '@react-three/fiber': 8.14.6(react-dom@18.2.0)(react@18.2.0)(three@0.155.0)
       '@webxr-input-profiles/motion-controllers': 1.0.0
@@ -367,8 +367,8 @@ packages:
       - immer
     dev: false
 
-  /@coconut-xr/xinteraction@0.1.11(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0):
-    resolution: {integrity: sha512-hBdq2OeVg3mBlpf5Qz1tL5E6KAnkVno8bG/bDx4chcmX2YXu4GLKHsUkSUjy9pXCSnA53j87X/H51qNavCgayw==}
+  /@coconut-xr/xinteraction@0.1.12(@react-three/fiber@8.14.6)(react@18.2.0)(three@0.155.0):
+    resolution: {integrity: sha512-nuKWTDz9qx1HRw7MASvqhxO7i676FVWdh+vITFhQYpQem7QLyJqSaU/gw3l7Qh7QYZENmvvte4X83D1oih/htA==}
     peerDependencies:
       '@react-three/fiber': '*'
       react: '*'

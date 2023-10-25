@@ -1,22 +1,25 @@
 import {
+  DynamicHandModel,
   ExtendedXRPlane,
+  HandBoneGroup,
   ImmersiveSessionOrigin,
   SpaceGroup,
-  TrackedMesh,
   TrackedPlane,
   TrackedPlaneGeometry,
+  VisibilityFocusStateGuard,
   XR,
   measureXRPlane,
   useEnterXR,
-  useTrackedMeshes,
+  useHandPoses,
+  useInputSources,
   useTrackedObjectPlanes,
-  useTrackedPlanes,
 } from "@coconut-xr/natuerlich/react";
-import { MeshProps, useFrame, useLoader, useThree } from "@react-three/fiber";
+import { ThreeEvent, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import {
   ReactNode,
   Suspense,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -28,35 +31,34 @@ import {
   BackSide,
   Box3,
   BoxGeometry,
-  DoubleSide,
+  CanvasTexture,
   EqualStencilFunc,
-  ExtrudeGeometry,
   FrontSide,
   Group,
   Material,
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  NotEqualStencilFunc,
   PlaneGeometry,
   Quaternion,
   RepeatWrapping,
   ReplaceStencilOp,
-  Shape,
-  ShapeGeometry,
-  Side,
   Texture,
   TextureLoader,
   Vector2,
   Vector3,
 } from "three";
-import { getPlaneId } from "@coconut-xr/natuerlich";
-import { Plane, useTexture } from "@react-three/drei";
+import { getInputSourceId, getPlaneId } from "@coconut-xr/natuerlich";
 import { clamp } from "three/src/math/MathUtils.js";
-import { Controllers, Hands } from "@coconut-xr/natuerlich/defaults";
+import {
+  XCurvedPointer,
+  XSphereCollider,
+} from "@coconut-xr/xinteraction/react";
+import { Sphere } from "@react-three/drei";
 
 const options: XRSessionInit = {
-  requiredFeatures: ["local-floor", "plane-detection"],
-  optionalFeatures: ["hand-tracking"],
+  requiredFeatures: ["local-floor", "plane-detection", "hand-tracking"],
 };
 
 const levelPositions = [2, 5, 8];
@@ -112,10 +114,7 @@ export default function App() {
           </mesh>
         }
       >
-        <Hands type="touch" />
-        <Suspense>
-          <Controllers type="pointer" />
-        </Suspense>
+        <DrawHands />
         <group visible={inside}>
           <Openings inside={inside} />
         </group>
@@ -123,6 +122,11 @@ export default function App() {
           <Elevators inside={inside} />
         </Suspense>
       </ImmersiveSessionOrigin>
+      {levelPositions.map((position, index) => (
+        <group key={index} position-y={position}>
+          <InsideWalls inside={inside} key={index} />
+        </group>
+      ))}
       <group visible={!inside}>
         {levelPositions.map((position, index) => (
           <group key={index} position-y={position}>
@@ -134,9 +138,100 @@ export default function App() {
         <City stencilRef={inside ? 1 : 0} />
       </Suspense>
       <Suspense>
-        <Walls inside={inside} />
+        <OutsideWalls inside={inside} />
       </Suspense>
     </>
+  );
+}
+
+function InsideWalls({ inside }: { inside: boolean }) {
+  const planes = useTrackedObjectPlanes("wall");
+  return (
+    <group>
+      {planes?.map((plane) => (
+        <InsideWall inside={inside} key={getPlaneId(plane)} plane={plane} />
+      ))}
+    </group>
+  );
+}
+
+const canvasSize = 2048;
+
+function InsideWall({ plane, inside }: { inside: boolean; plane: XRPlane }) {
+  const [canvas, setCanvas] = useState<HTMLCanvasElement | undefined>(
+    undefined
+  );
+  const context = useMemo(() => canvas?.getContext("2d"), [canvas]);
+  const texture = useMemo(
+    () => (canvas == null ? undefined : new CanvasTexture(canvas)),
+    [canvas]
+  );
+  const lastPositionMap = useMemo(() => new Map<number, Vector2>(), []);
+  return (
+    <group
+      visible={texture != null}
+      onPointerMove={useCallback(
+        (e: ThreeEvent<PointerEvent>) => {
+          if (e.pointerId === 55 || e.pointerId === 56) {
+            return;
+          }
+          if (canvas == null) {
+            setCanvas((existingElement) => {
+              if (existingElement != null) {
+                return;
+              }
+              const element = document.createElement("canvas");
+              element.width = canvasSize;
+              element.height = canvasSize;
+              return element;
+            });
+            return;
+          }
+          if (context == null || texture == null) {
+            return;
+          }
+          const point = new Vector2(
+            Math.floor(e.uv!.x * canvasSize),
+            canvasSize - Math.floor(e.uv!.y * canvasSize)
+          );
+          if (e.pointerId < 0) {
+            //eraser
+            context.beginPath();
+            context.globalCompositeOperation = "destination-out";
+            context.moveTo(point.x, point.y);
+            context.arc(point.x, point.y, 25, 0, 2 * Math.PI);
+            context.fill();
+            texture.needsUpdate = true;
+            return;
+          }
+          context.beginPath();
+          const lastPoint = lastPositionMap.get(e.pointerId) ?? point;
+          lastPositionMap.set(e.pointerId, point);
+          context.globalCompositeOperation = "source-over";
+          context.lineWidth = 4;
+          context.moveTo(lastPoint.x, lastPoint.y);
+          context.lineTo(point.x, point.y);
+          context.stroke();
+          texture.needsUpdate = true;
+        },
+        [context]
+      )}
+      onPointerLeave={useCallback(
+        (e: ThreeEvent<PointerEvent>) => lastPositionMap.delete(e.pointerId),
+        []
+      )}
+    >
+      <TrackedPlane plane={plane}>
+        <meshBasicMaterial
+          side={FrontSide}
+          stencilWrite
+          stencilRef={0}
+          stencilFunc={inside ? EqualStencilFunc : NotEqualStencilFunc}
+          map={texture}
+          transparent
+        />
+      </TrackedPlane>
+    </group>
   );
 }
 
@@ -234,7 +329,82 @@ function Openings({ inside }: { inside: boolean }) {
   );
 }
 
-function Walls({ inside }: { inside: boolean }) {
+function DrawHands() {
+  const inputSources = useInputSources();
+  return (
+    <VisibilityFocusStateGuard>
+      {inputSources.map((inputSource) =>
+        inputSource.hand == null ? undefined : (
+          <DrawHand
+            key={getInputSourceId(inputSource)}
+            hand={inputSource.hand}
+            inputSource={inputSource}
+          />
+        )
+      )}
+    </VisibilityFocusStateGuard>
+  );
+}
+
+const shortLine = [new Vector3(0, 0, 0.03), new Vector3(0, 0, -0.025)];
+const longLine = [new Vector3(0, 0, 0.06), new Vector3(0, 0, -0.06)];
+//const geometry = new BufferGeometry().setFromPoints(longLine);
+
+function DrawHand({
+  inputSource,
+  hand,
+}: {
+  inputSource: XRInputSource;
+  hand: XRHand;
+}) {
+  const [rubber, setRubber] = useState(false);
+  useHandPoses(
+    hand,
+    inputSource.handedness,
+    useCallback((pose: string) => setRubber(pose === "fist"), []),
+    {
+      fist: "fist.handpose",
+      point: "point.handpose",
+    }
+  );
+  return (
+    <Suspense>
+      <DynamicHandModel hand={hand} handedness={inputSource.handedness}>
+        <HandBoneGroup joint="index-finger-tip">
+          {!rubber && (
+            <XCurvedPointer
+              id={getInputSourceId(inputSource)}
+              points={shortLine}
+            />
+          )}
+          <XSphereCollider
+            radius={0.1}
+            distanceElement={{ id: 0, downRadius: 0.03 }}
+            id={inputSource.handedness === "left" ? 55 : 56}
+          />
+        </HandBoneGroup>
+        <HandBoneGroup joint="wrist">
+          {rubber && (
+            <group
+              rotation-y={
+                inputSource.handedness === "left" ? Math.PI / 2 : -Math.PI / 2
+              }
+              position-z={-0.07}
+              position-y={-0.03}
+            >
+              <XCurvedPointer
+                id={-getInputSourceId(inputSource)}
+                points={longLine}
+              />
+            </group>
+          )}
+        </HandBoneGroup>
+      </DynamicHandModel>
+    </Suspense>
+  );
+}
+
+function OutsideWalls({ inside }: { inside: boolean }) {
   const planes = useTrackedObjectPlanes("wall");
   const texture: Texture = useLoader(TextureLoader, "/hochhaus/texture.jpg");
   texture.repeat.y = 20;
@@ -242,26 +412,28 @@ function Walls({ inside }: { inside: boolean }) {
   texture.wrapS = RepeatWrapping;
   texture.wrapT = RepeatWrapping;
   return (
-    <group visible={!inside}>
-      {planes?.map((plane) => (
-        <SpaceGroup
-          key={getPlaneId(plane)}
-          space={plane.planeSpace}
-          initialPose={plane.initialPose}
-        >
-          <mesh scale-z={10}>
-            <TrackedPlaneGeometry plane={plane} />
-            <meshBasicMaterial
-              stencilWrite
-              stencilRef={0}
-              stencilFunc={EqualStencilFunc}
-              map={texture}
-              side={BackSide}
-            />
-          </mesh>
-        </SpaceGroup>
-      ))}
-    </group>
+    <>
+      <group visible={!inside}>
+        {planes?.map((plane) => (
+          <SpaceGroup
+            key={getPlaneId(plane)}
+            space={plane.planeSpace}
+            initialPose={plane.initialPose}
+          >
+            <mesh scale-z={10}>
+              <TrackedPlaneGeometry plane={plane} />
+              <meshBasicMaterial
+                stencilWrite
+                stencilRef={0}
+                stencilFunc={EqualStencilFunc}
+                map={texture}
+                side={BackSide}
+              />
+            </mesh>
+          </SpaceGroup>
+        ))}
+      </group>
+    </>
   );
 }
 
@@ -295,7 +467,12 @@ function Elevators({ inside }: { inside: boolean }) {
   return (
     <>
       {planes?.map((plane) => (
-        <Elevator texture={texture} inside={inside} plane={plane} />
+        <Elevator
+          key={getPlaneId(plane)}
+          texture={texture}
+          inside={inside}
+          plane={plane}
+        />
       ))}
     </>
   );
@@ -373,7 +550,12 @@ function ElevatorButton({ index, inside }: { inside: boolean; index: number }) {
       position={[0, 1.5, 1.5 + index * 0.1]}
       scale={0.05}
       geometry={buttonGeometry}
-      onPointerDown={() => (targetFloor = index)}
+      onPointerDown={(e) => {
+        if (e.pointerId != 55 && e.pointerId != 56) {
+          return;
+        }
+        targetFloor = index;
+      }}
     >
       <meshBasicMaterial
         ref={ref}
