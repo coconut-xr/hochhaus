@@ -124,7 +124,7 @@ export default function App() {
       </ImmersiveSessionOrigin>
       {levelPositions.map((position, index) => (
         <group key={index} position-y={position}>
-          <InsideWalls inside={inside} key={index} />
+          <InsideWalls floor={index} inside={inside} key={index} />
         </group>
       ))}
       <group visible={!inside}>
@@ -144,10 +144,17 @@ export default function App() {
   );
 }
 
-function InsideWalls({ inside }: { inside: boolean }) {
+function InsideWalls({ inside, floor }: { floor: number; inside: boolean }) {
+  const ref = useRef<Group>(null);
   const planes = useTrackedObjectPlanes("wall");
+  useFrame(() => {
+    if (ref.current == null) {
+      return;
+    }
+    ref.current.visible = targetFloor === floor;
+  });
   return (
-    <group>
+    <group ref={ref}>
       {planes?.map((plane) => (
         <InsideWall inside={inside} key={getPlaneId(plane)} plane={plane} />
       ))}
